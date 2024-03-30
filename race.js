@@ -5,6 +5,14 @@
     Description: JavaScript file containing a Car class, race simulation function, and race results rendering logic.
 */
 
+/**
+ * Function to pause execution for a given duration.
+ * @param {number} duration Duration in milliseconds to pause.
+ */
+function delay(duration) {
+    return new Promise(resolve => setTimeout(resolve, duration));
+}
+
 // Define a class representing a Car
 class Car {
     // Constructor function to initialize car properties
@@ -47,8 +55,11 @@ const cars = [
     new Car("Kia", "Forte", 2020, "Blue", 21000, 56)
 ];
 
-// Function to simulate a race for given number of turns
-function simulateRace(turns) {
+/**
+ * Function to simulate a race for given number of turns.
+ * @param {number} turns Number of turns for the race.
+ */
+async function simulateRace(turns) {
     const results = []; // Array to store race results for each turn
     // Loop for each turn
     for (let turn = 1; turn <= turns; turn++) {
@@ -56,32 +67,63 @@ function simulateRace(turns) {
         // Iterate through each car and simulate gas loss for the turn
         cars.forEach(car => {
             car.loseGas();
-            turnResults.push(car.gas); // Add gas level to turn results
+            turnResults.push(car); // Add car to turn results
         });
+        // Sort cars based on gas level in descending order
+        turnResults.sort((a, b) => b.gas - a.gas);
         results.push(turnResults); // Add turn results to overall race results
+
+        await renderRaceResults(results, turn); // Render the race results for the current turn
+        if (turn < turns) {
+            await delay(2000); // Delay between turns (2000 milliseconds = 2 seconds)
+        }
     }
+    // Highlight the winner after the race ends
+    highlightWinner();
     return results; // Return the race results
 }
 
-// Simulate race for 7 turns
-const raceResults = simulateRace(7);
+// Function to render race results for a specific turn
+async function renderRaceResults(results, turn) {
+    // Get the tbody element of the race results table
+    const tbody = document.querySelector('#race-results tbody');
+    // Clear the existing table content
+    tbody.innerHTML = '';
 
-// Get the tbody element of the race results table
-const tbody = document.querySelector('#race-results tbody');
-
-// Add race results to the HTML table
-raceResults.forEach((turnResult, index) => {
-    const tr = document.createElement('tr'); // Create a table row for each turn
+    // Add race results for the specified turn to the HTML table
+    const turnResult = results[turn - 1]; // Get cars for the current turn
+    const tr = document.createElement('tr'); // Create a table row for the turn
     const turnTd = document.createElement('td'); // Create a table cell for turn number
-    turnTd.textContent = index + 1; // Set the turn number
+    turnTd.textContent = turn; // Set the turn number
     tr.appendChild(turnTd); // Append the turn number cell to the row
 
-    // Iterate through gas levels of each car for the turn
-    turnResult.forEach(gas => {
-        const gasTd = document.createElement('td'); // Create a table cell for gas level
-        gasTd.textContent = gas + ' liters'; // Set the gas level text
-        tr.appendChild(gasTd); // Append the gas level cell to the row
+    // Iterate through cars for the current turn
+    turnResult.forEach(car => {
+        const carTd = document.createElement('td'); // Create a table cell for car details
+        carTd.textContent = `${car.brand} ${car.model} (${car.gas} liters)`; // Set the car details text
+        tr.appendChild(carTd); // Append the car details cell to the row
     });
 
     tbody.appendChild(tr); // Append the row to the tbody
-});
+}
+
+// Function to highlight the winner after the race ends
+function highlightWinner() {
+    // Find the car with the highest gas level at the end of the race
+    const winner = cars.reduce((prev, curr) => (curr.gas > prev.gas) ? curr : prev);
+
+    // Highlight the cell corresponding to the gas level of the winner
+    const tbody = document.querySelector('#race-results tbody');
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(row => {
+        const carCells = row.querySelectorAll('td:not(:first-child)');
+        carCells.forEach(cell => {
+            if (cell.textContent.startsWith(`${winner.brand} ${winner.model}`)) {
+                cell.style.backgroundColor = 'green';
+            }
+        });
+    });
+}
+
+// Start the race simulation for 7 turns
+simulateRace(7);
